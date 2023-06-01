@@ -1,0 +1,599 @@
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
+import java.util.ArrayList;
+
+
+
+
+//import org.jcp.xml.dsig.internal.MacOutputStream;
+
+
+/**
+ * This class implements the Map2D interface.
+ * You should change (implement) this class as part of Ex3. 
+ * 
+ * @author
+ * ID1: 208938191
+ * ID2: https://www.youtube.com/watch?v=QC3S39ay8Ds
+ * */
+public class MyMap2D implements Map2D{
+	private int[][] _map;
+	public int steps=0;
+	public ArrayList<Point2D> path=new ArrayList<Point2D>();
+	public MyMap2D(int w, int h) {init(w,h);}
+	public MyMap2D(int size) {this(size,size);}
+
+	public MyMap2D(int[][] data) { 
+		this(data.length, data[0].length);
+		init(data);
+	}
+	@Override
+	public void init(int w, int h) {
+		_map = new int[w][h];
+
+	}
+
+
+	@Override
+	public void init(int[][] arr) {
+		init(arr.length,arr[0].length);
+		for(int x = 0;x<this.getWidth()&& x<arr.length;x++) {
+			for(int y=0;y<this.getHeight()&& y<arr[0].length;y++) {
+				this.setPixel(x, y, arr[x][y]);
+			}
+		}
+	}
+	/**
+	 * inMpa check if the given point inside the range of the map 
+	 * if its in return true
+	 * if its out return false
+	 */
+
+	public boolean inMap(Point2D p) {        // check if the point in the range of the map
+		if(p.ix()>=0&&p.ix()<this.getWidth()&&p.iy()>=0&&p.iy()<this.getHeight()) {
+			return true;
+
+		}
+		else {
+			return false;
+		}
+	}
+
+	/**
+	 * copyMap is a part of ShortPath solution
+	 * the function will change all the possible passage (points that are in the same color of the starting point  and the finishing point)
+	 * if the pixel in the same color set -1 (can pass) else set -2 (can't pass)
+	 * 
+	 */
+
+
+	public void copyMap(Point2D p1,MyMap2D copy)           
+	{
+
+		int color=this.getPixel(p1);
+
+
+
+		for (int i = 0; i < copy.getWidth(); i++) {
+			for (int j = 0; j < copy.getHeight(); j++) {
+				if(this.getPixel(i, j)==color) 
+				{
+					copy.setPixel(i,j, -1);
+
+				}
+				else                               				{
+					copy.setPixel(i,j, -2);
+				}
+
+			}
+		}
+
+
+
+	}
+
+	@Override
+	public int getWidth() {return _map.length;}
+	@Override
+	public int getHeight() {return _map[0].length;}
+	@Override
+	public int getPixel(int x, int y) { return _map[x][y];}
+	@Override
+	public int getPixel(Point2D p) { 
+		return this.getPixel(p.ix(),p.iy());
+	}
+
+	public void setPixel(int x, int y, int v) {_map[x][y] = v;}
+	public void setPixel(Point2D p, int v) { 
+		setPixel(p.ix(), p.iy(), v);
+	}
+
+	@Override
+	public void drawSegment(Point2D p1, Point2D p2, int v) {
+
+		Point2D go= new Point2D(p1);
+		double distence=Math.max(Math.abs(p2.x()-p1.x()),Math.abs(p2.y()-p1.y()));        //Distance is the max distance between Y's values and the X's value
+		Point2D vector = new Point2D((p2.x()-p1.x())/ distence,(p2.y()-p1.y())/distence); // the vector from p1 to p2
+		int steps=0;
+		while(steps<=distence) {                                                          // we divide the distance between p1 and p2 by the max distance to create satires 
+			this.setPixel(go, v);
+			go=go.add(vector);
+			steps++;
+		}
+		this.setPixel(p2, v);
+
+
+
+	}
+
+
+	@Override
+	public void drawRect(Point2D p1, Point2D p2, int col) {           // get the max and min of x and y and paint all the area between them
+		int minX=(int)Math.round(Math.min(p1.x(),p2.x())); 
+		int maxX=(int)Math.round(Math.max(p1.x(),p2.x()));
+		int minY=(int)Math.round(Math.min(p1.y(),p2.y()));
+		int maxY=(int)Math.round(Math.max(p1.y(),p2.y()));
+		for (int i = minX; i <= maxX; i++) {
+			for (int j = minY; j <=maxY; j++) {
+				this.setPixel(i, j, col);
+			}
+		}
+
+	}
+
+	@Override
+	public void drawCircle(Point2D p, double rad, int col) {          
+		Circle2D c=new Circle2D(p,rad);                           // c is a Circle2D type that have center and radius. one of circle function is "contain" that chek if the point is in the circle
+		MyMap2D map=new MyMap2D(this._map);
+		// first we will create a copy of the map
+		// we will add the center point to the array list and set his pixel and mark it on the copy map as 8
+		// we will  check for all his neighbor cells (8 of them), if they inside the circle and not mark in the copy map as 8 (meaning already painted) ->
+		// we will paint them and add them to the arraylist. this will continue until there is no point to add (or outside the circle or already paint)
+
+
+		ArrayList<Point2D> path=new ArrayList<Point2D>();
+		path.add(p);
+		this.setPixel(p,col);
+		map.setPixel(p,8);
+
+
+		while(path.isEmpty()==false) {                      // while there is more point to add/check
+
+			Point2D r=new Point2D(p).add(new Point2D(1,0));
+			Point2D l=new Point2D(p).add(new Point2D(-1,0));
+			Point2D u=new Point2D(p).add(new Point2D(0,1));
+			Point2D d=new Point2D(p).add(new Point2D(0,-1));
+			Point2D ul=new Point2D(p).add(new Point2D(-1,1));
+			Point2D ur=new Point2D(p).add(new Point2D(1,1));
+			Point2D dl=new Point2D(p).add(new Point2D(-1,-1));
+			Point2D dr=new Point2D(p).add(new Point2D(1,-1));
+
+			if(inMap(dr)&&c.contain(dr)&&map.getPixel(dr)!=8) {              // check for each neighbor if it is in the map, inside the radius , and not already painted
+				map.setPixel(dr,8);
+				this.setPixel(dr, col);
+				path.add(dr);
+
+
+			}
+
+			if(inMap(dl)&&c.contain(dl)&&map.getPixel(dl)!=8) {
+				map.setPixel(dl,8);
+				this.setPixel(dl, col);
+				path.add(dl);
+
+
+			}
+
+			if(inMap(ur)&&c.contain(ur)&&map.getPixel(ur)!=8) {
+				map.setPixel(ur,8);
+				this.setPixel(ur, col);
+				path.add(ur);
+
+
+			}
+
+			if(inMap(ul)&&c.contain(ul)&&map.getPixel(ul)!=8) {
+				map.setPixel(ul,8);
+				this.setPixel(ul, col);
+				path.add(ul);
+
+
+			}
+
+			if(inMap(r)&&c.contain(r)&&map.getPixel(r)!=8) {
+				map.setPixel(r,8);
+				this.setPixel(r, col);
+				path.add(r);
+
+
+			}
+			if(inMap(l)&&c.contain(l)&&map.getPixel(l)!=8) {
+				map.setPixel(l,8);
+				this.setPixel(l, col);
+				path.add(l);
+
+
+			}
+			if(inMap(u)&&c.contain(u)&&map.getPixel(u)!=8) {
+				map.setPixel(u,8);
+				this.setPixel(u,col);
+				path.add(u);
+
+
+			}
+			if(inMap(d)&&c.contain(d)&&map.getPixel(d)!=8) {
+				map.setPixel(d,8);
+				this.setPixel(d, col);
+				path.add(d);
+
+
+			}
+			path.remove(0);                            
+			if(!path.isEmpty()) {
+				p=path.get(0);
+			}
+
+		}
+	}
+
+
+
+
+
+	@Override
+	public int fill(Point2D p, int new_v) { 
+		// we will create arraylist and add the first point and paint it. after that we will check every neighbor and if it in the same color paint it and add at to the arry
+		// after that we will remove p from the arraylist and update p to be the first point in the arraylist and do the  neighbor check again.
+		// the loop will end when there is no more color to paint
+		int color=getPixel(p);
+		int count=1;
+		ArrayList<Point2D> path=new ArrayList<Point2D>();
+		path.add(p);
+		this.setPixel(p,new_v);
+
+
+
+		while(path.isEmpty()==false) {
+			Point2D right=new Point2D(p).add(new Point2D(1,0));
+			Point2D left=new Point2D(p).add(new Point2D(-1,0));
+			Point2D up=new Point2D(p).add(new Point2D(0,1));
+			Point2D down=new Point2D(p).add(new Point2D(0,-1));
+
+			if(inMap(right)&&this.getPixel(right)==color) {
+				this.setPixel(right, new_v);
+				path.add(right);
+				count++;
+
+			}
+			if(inMap(left)&&this.getPixel(left)==color) {
+				this.setPixel(left,new_v);
+				path.add(left);
+				count++;
+
+			}
+			if(inMap(up)&&this.getPixel(up)==color) {
+				this.setPixel(up,new_v);
+				path.add(up);
+				count++;
+
+			}
+			if(inMap(down)&&this.getPixel(down)==color) {
+				this.setPixel(down,new_v);
+				path.add(down);
+				count++;
+
+			}
+			path.remove(0);                                    // remove p from the list and update p to be the next point in the arraylist
+			if(!path.isEmpty()) {
+				p=path.get(0);
+			}
+
+		}
+
+
+
+		return count;
+	}
+
+
+
+
+	@Override
+	public int fill(int x, int y, int new_v) {                          // send the coordinate to fill(point2D) and get the number of cell that are painted;
+		int count=fill(new Point2D(x,y), new_v);
+		return count;
+	}
+
+
+	@Override
+	public Point2D[] shortestPath(Point2D p1, Point2D p2) {
+		if(p1.equals(p2)) {                                         // if p1 and p2 are the same point the path is one point and 0 steps
+			Point2D[] ans=new Point2D[1];
+			ans[0]=p1;
+			System.out.println("number of steps:0 the Points are equals");
+			return ans;
+
+		}
+		MyMap2D map=new MyMap2D(this._map);      //create copy of the map and fill the point that are the same color with -1(pass) and other as -2 (no pass)
+		map.copyMap(p1,map);
+
+		Point2D originPoint=new Point2D(p1);
+		if(map.getPixel(p2)!=-1||map.getPixel(p1)!=-1||inMap(p2)==false||inMap(p2)==false) { //if p1 or p2 with no -1 value its mean there is no path between the point
+			throw new RuntimeException("Err: no path. choose available "); 
+		}
+		// if there is a path check if there is available neighbor (in the map and  with -1 value) if there is mark it with the index of the point +1
+		// end the loop if p2 is no longer -1 (we reach from p1 to p2) or the list is empty (there is no path) 
+
+		ArrayList<Point2D> path=new ArrayList<Point2D>();
+		path.add(p1);
+		map.setPixel(p1,0);
+
+
+
+		while(map.getPixel(p2)==-1&&path.isEmpty()==false) {
+			Point2D right=new Point2D(p1).add(new Point2D(1,0));
+			Point2D left=new Point2D(p1).add(new Point2D(-1,0));
+			Point2D up=new Point2D(p1).add(new Point2D(0,1));
+			Point2D down=new Point2D(p1).add(new Point2D(0,-1));
+
+			if(inMap(right)&&map.getPixel(right)==-1) {
+				map.setPixel(right,map.getPixel(p1)+1);
+				path.add(right);
+
+			}
+			if(inMap(left)&&map.getPixel(left)==-1) {
+				map.setPixel(left,map.getPixel(p1)+1);
+				path.add(left);
+
+			}
+			if(inMap(up)&&map.getPixel(up)==-1) {
+				map.setPixel(up,map.getPixel(p1)+1);
+				path.add(up);
+
+			}
+			if(inMap(down)&&map.getPixel(down)==-1) {
+				map.setPixel(down,map.getPixel(p1)+1);
+				path.add(down);
+
+			}
+			path.remove(0);
+			if(!path.isEmpty()) {
+				p1=path.get(0);
+			}
+
+		}
+
+		if(map.getPixel(p2)!=-1) {                   // if we reach p2
+			Point2D[] ans=new Point2D[(map.getPixel(p2))+1];
+			int i=0;
+			ans[i]=p2;
+			while(map.getPixel(p2)!=map.getPixel(originPoint))                    // do the opposite way from p2 to p1 and collect the points and add the to the array;
+			{
+
+				i++;
+				Point2D right2=new Point2D(p2).add(new Point2D(1,0));
+				Point2D left2=new Point2D(p2).add(new Point2D(-1,0));
+				Point2D up2=new Point2D(p2).add(new Point2D(0,1));
+				Point2D down2=new Point2D(p2).add(new Point2D(0,-1));
+
+				if(inMap(right2)&&map.getPixel(right2)==(map.getPixel(p2)-1))
+				{
+					p2=right2;
+					ans[i]=p2;
+
+				}
+				else if(inMap(left2)&&map.getPixel(left2)==(map.getPixel(p2)-1))
+				{
+					p2=left2;
+					ans[i]=p2;
+				}
+				else if(inMap(up2)&&map.getPixel(up2)==(map.getPixel(p2)-1))
+				{
+					p2=up2;
+					ans[i]=p2;
+				}
+				else if(inMap(down2)&&map.getPixel(down2)==(map.getPixel(p2)-1))
+				{
+					p2=down2;
+					ans[i]=p2;	
+				}
+
+			}
+			ans[i]=originPoint;                                                     // add the last point (p1 original place)
+
+
+			for (int j = 0; j < ans.length; j++) {                                 // paint the shortPath
+				this.setPixel(ans[j], Ex3.getColor);
+
+			}
+			int steps=ans.length-1;
+			System.out.println("number of steps: "+steps+"  number of points:  "+(steps+1));
+			return ans;
+
+
+		}
+		
+		
+		System.out.println("there is no path");            // if there is no path return null
+		return null;
+
+	}
+
+
+
+
+
+	@Override
+	public int shortestPathDist(Point2D p1, Point2D p2) {
+		if(p1.equals(p2)) {                                         // if p1 and p2 are the same point the path is one point and 0 steps
+			Point2D[] ans=new Point2D[1];
+			ans[0]=p1;
+			System.out.println("number of steps:0 the Points are equals");
+			return 0;
+
+		}
+		MyMap2D map=new MyMap2D(this._map);      //create copy of the map and fill the point that are the same color with -1(pass) and other as -2 (no pass)
+		map.copyMap(p1,map);
+		if(map.getPixel(p2)!=-1||map.getPixel(p1)!=-1||inMap(p2)==false||inMap(p2)==false) { //if p1 or p2 with no -1 value its mean there is no path between the point
+			throw new RuntimeException("Err: no path. choose available "); 
+		}
+		// if there is a path check if there is available neighbor (in the map and  with -1 value) if there is mark it with the index of the point +1
+		// end the loop if p2 is no longer -1 (we reach from p1 to p2) or the list is empty (there is no path) 
+
+		ArrayList<Point2D> path=new ArrayList<Point2D>();
+		path.add(p1);
+		map.setPixel(p1,0);
+
+
+
+		while(map.getPixel(p2)==-1&&path.isEmpty()==false) {
+			Point2D right=new Point2D(p1).add(new Point2D(1,0));
+			Point2D left=new Point2D(p1).add(new Point2D(-1,0));
+			Point2D up=new Point2D(p1).add(new Point2D(0,1));
+			Point2D down=new Point2D(p1).add(new Point2D(0,-1));
+
+			if(inMap(right)&&map.getPixel(right)==-1) {
+				map.setPixel(right,map.getPixel(p1)+1);
+				path.add(right);
+
+			}
+			if(inMap(left)&&map.getPixel(left)==-1) {
+				map.setPixel(left,map.getPixel(p1)+1);
+				path.add(left);
+
+			}
+			if(inMap(up)&&map.getPixel(up)==-1) {
+				map.setPixel(up,map.getPixel(p1)+1);
+				path.add(up);
+
+			}
+			if(inMap(down)&&map.getPixel(down)==-1) {
+				map.setPixel(down,map.getPixel(p1)+1);
+				path.add(down);
+
+			}
+			path.remove(0);
+			if(!path.isEmpty()) {
+				p1=path.get(0);
+			}
+
+		}
+		if(map.getPixel(p2)!=-1) {        // if we reach to p2 return the value of p2 (index of steps)
+			return map.getPixel(p2);
+		}
+		return -1;                   // if there is no way return -1
+	}
+	
+	
+	
+	
+	public int neighbors(MyMap2D map,Point2D p1) {                     // check for a given point the number of live neighbors
+		int count=0;
+
+
+
+
+		Point2D r=new Point2D(p1).add(new Point2D(1,0));
+		Point2D l=new Point2D(p1).add(new Point2D(-1,0));
+		Point2D u=new Point2D(p1).add(new Point2D(0,1));
+		Point2D d=new Point2D(p1).add(new Point2D(0,-1));
+		Point2D ul=new Point2D(p1).add(new Point2D(-1,1));
+		Point2D ur=new Point2D(p1).add(new Point2D(1,1));
+		Point2D dl=new Point2D(p1).add(new Point2D(-1,-1));
+		Point2D dr=new Point2D(p1).add(new Point2D(1,-1));
+		if(inMap(r)) {
+			if(map.getPixel(r)!=Ex3.WHITE) {
+				count++;
+			}
+		}
+		if(inMap(l)) {
+			if(map.getPixel(l)!=Ex3.WHITE) {
+				count++;
+			}
+		}
+		if(inMap(u)) {
+			if(map.getPixel(u)!=Ex3.WHITE) {
+				count++;
+			}
+		}
+		if(inMap(d)) {
+			if(map.getPixel(d)!=Ex3.WHITE) {
+				count++;
+			}
+		}
+		if(inMap(ul)) {
+			if(map.getPixel(ul)!=Ex3.WHITE) {
+				count++;
+			}
+		}
+		if(inMap(ur)) {
+			if(map.getPixel(ur)!=Ex3.WHITE) {
+				count++;
+			}
+		}
+		if(inMap(dl)) {
+			if(map.getPixel(dl)!=Ex3.WHITE) {
+				count++;
+			}
+		}
+		if(inMap(dr)) {
+			if(map.getPixel(dr)!=Ex3.WHITE) {
+				count++;
+			}
+		}
+		return count;
+
+
+	}
+
+
+
+
+/**
+ * the function will do all the calculation on copy map and set the pixels on the origin map 
+ * the function will check for each point the number of live neighbors
+ * if its 3 the cell will be alive next turn
+ * of its 2 and the cell was alive (black) the pixel will be alive next turn
+ * in all the other cases the cell will die
+ */
+	@Override
+	public void nextGenGol() {
+		MyMap2D map=new MyMap2D(this._map);            // create a copy of the map for calculate
+		int count=0;
+		for (int i = 0; i < map.getWidth(); i++) {
+			for (int j = 0; j < map.getHeight(); j++) {
+				Point2D p=new Point2D(i,j);                 
+				count=neighbors(map,p);              // check all live neighbors
+				if(count==3)                          
+				{
+					this.setPixel(p, Ex3.BLACK);
+				}
+				else if(count==2&&map.getPixel(p)!=Ex3.WHITE) {
+					this.setPixel(p, Ex3.BLACK);
+				}
+				else {
+					this.setPixel(p, Ex3.WHITE);
+				}
+			}
+		}
+
+
+
+
+
+
+	}
+	@Override
+	public void fill(int c) {
+		for(int x = 0;x<this.getWidth();x++) {
+			for(int y = 0;y<this.getHeight();y++) {
+				this.setPixel(x, y, c);
+
+			}
+		}
+
+	}
+
+}
+
+
